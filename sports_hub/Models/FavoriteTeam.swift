@@ -16,8 +16,8 @@ struct FavoriteTeam: Identifiable, Hashable {
 }
 
 let favoriteTeams: [FavoriteTeam] = [
-    FavoriteTeam(name: "Liverpool",           sport: .football,       teamId: nil,   apiName: nil),
-    FavoriteTeam(name: "Carolina Panthers",   sport: .nfl,            teamId: 92741, apiName: nil),
-    FavoriteTeam(name: "UNC Tarheels",        sport: .ncaaBasketball, teamId: 11092, apiName: nil),
-    FavoriteTeam(name: "Carolina Hurricanes", sport: .nhl,            teamId: nil,   apiName: "Hurricanes")
+    FavoriteTeam(name: "Liverpool", sport: .football, teamId: nil, apiName: nil),
+    FavoriteTeam(name: "Carolina Panthers", sport: .nfl, teamId: 92741, apiName: nil),
+    FavoriteTeam(name: "UNC Tarheels", sport: .ncaaBasketball, teamId: 11092, apiName: nil),
+    FavoriteTeam(name: "Carolina Hurricanes", sport: .nhl, teamId: nil, apiName: "Hurricanes")
 ]
