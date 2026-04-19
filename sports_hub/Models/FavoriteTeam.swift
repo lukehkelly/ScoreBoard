@@ -6,18 +6,26 @@
 //
 
 import Foundation
+import SwiftData
 
-struct FavoriteTeam: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    let sport: Sport
-    let teamId: Int?
-    let apiName: String?
+@Model
+class FavoriteTeam {
+    var name: String
+    var sportRaw: String
+    var teamId: Int?
+    var apiName: String?
+    var logoURL: String?
+
+    var sport: Sport {
+        get { Sport(rawValue: sportRaw) ?? .football }
+        set { sportRaw = newValue.rawValue }
+    }
+
+    init(name: String, sport: Sport, teamId: Int? = nil, apiName: String? = nil, logoURL: String? = nil) {
+        self.name = name
+        self.sportRaw = sport.rawValue
+        self.teamId = teamId
+        self.apiName = apiName
+        self.logoURL = logoURL
+    }
 }
-
-let favoriteTeams: [FavoriteTeam] = [
-    FavoriteTeam(name: "Liverpool", sport: .football, teamId: nil, apiName: nil),
-    FavoriteTeam(name: "Carolina Panthers", sport: .nfl, teamId: 92741, apiName: nil),
-    FavoriteTeam(name: "UNC Tarheels", sport: .ncaaBasketball, teamId: 11092, apiName: nil),
-    FavoriteTeam(name: "Carolina Hurricanes", sport: .nhl, teamId: nil, apiName: "Hurricanes")
-]

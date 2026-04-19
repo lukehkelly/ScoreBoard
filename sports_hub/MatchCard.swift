@@ -51,19 +51,7 @@ struct MatchCard: View {
                         .minimumScaleFactor(0.6)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-                Group {
-                    if let score = match.state?.score?.displayString {
-                        Text(score)
-                            .font(.title3.weight(.heavy).monospacedDigit())
-                            .foregroundStyle(.primary)
-                    } else {
-                        Text("vs")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(width: 72, alignment: .center)
+                .padding(.trailing, 48)
 
                 HStack(spacing: 9) {
                     Text(match.awayTeam.name)
@@ -75,6 +63,19 @@ struct MatchCard: View {
                     TeamLogo(url: match.awayTeam.logo, size: 30)
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.leading, 48)
+            }
+            .overlay {
+                if let score = match.state?.score?.displayString {
+                    Text(score)
+                        .font(.title2.weight(.heavy).monospacedDigit())
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("vs")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.horizontal, 18)
             .padding(.top, 14)
@@ -95,7 +96,8 @@ struct MatchCard: View {
     }
 
     private var emptyCard: some View {
-        HStack {
+        HStack(spacing: 12) {
+            TeamLogo(url: team.logoURL, size: 36)
             VStack(alignment: .leading, spacing: 8) {
                 Text(team.name)
                     .font(.title3.weight(.black))

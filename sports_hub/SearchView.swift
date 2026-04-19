@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SearchView: View {
     private let service = SportsService.shared
+    @Environment(\.modelContext) private var modelContext
+    @Query private var favoriteTeams: [FavoriteTeam]
     @State private var query = ""
     @State private var submittedQuery = ""
     @State private var results: [TeamResult] = []
@@ -78,7 +81,7 @@ struct SearchView: View {
                         Spacer()
                     }
                     .padding(.top, 40)
-                } else if results.isEmpty && !query.isEmpty {
+                } else if results.isEmpty && !submittedQuery.isEmpty {
                     HStack {
                         Spacer()
                         Text("No teams found")
@@ -91,7 +94,13 @@ struct SearchView: View {
                     ScrollView {
                         VStack(spacing: 1) {
                             ForEach(results) { result in
-                                TeamRow(result: result)
+                                TeamRow(
+                                    result: result,
+                                    isAdded: favoriteTeams.contains {
+                                        $0.name == (result.team.displayName ?? result.team.name) && $0.sportRaw == result.sport.rawValue
+                                    },
+                                    onAdd: { addTeam(from: result) }
+                                )
                             }
                         }
                         .padding(.horizontal, 16)
@@ -113,10 +122,24 @@ struct SearchView: View {
             isSearching = false
         }
     }
+
+    private func addTeam(from result: TeamResult) {
+        let name = result.team.displayName ?? result.team.name
+        let team = FavoriteTeam(
+            name: name,
+            sport: result.sport,
+            teamId: result.team.id,
+            apiName: nil,
+            logoURL: result.team.logo
+        )
+        modelContext.insert(team)
+    }
 }
 
 private struct TeamRow: View {
     let result: TeamResult
+    let isAdded: Bool
+    let onAdd: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -130,9 +153,12 @@ private struct TeamRow: View {
                 SportBadge(sport: result.sport)
             }
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary.opacity(0.4))
+            Button(action: onAdd) {
+                Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle")
+                    .font(.title3)
+                    .foregroundStyle(isAdded ? Theme.accent : Color.secondary.opacity(0.6))
+            }
+            .disabled(isAdded)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
@@ -147,4 +173,5 @@ private struct TeamRow: View {
 
 #Preview {
     SearchView()
+        .modelContainer(for: FavoriteTeam.self, inMemory: true)
 }

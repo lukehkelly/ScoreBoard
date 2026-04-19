@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Sport: Hashable {
+enum Sport: String, Codable, Hashable {
     case football
     case nfl
     case ncaaFootball

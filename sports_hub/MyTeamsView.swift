@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 enum SortOrder {
     case mostRecent, alphabetical
@@ -20,9 +21,12 @@ enum SortOrder {
 
 struct MyTeamsView: View {
     private let service = SportsService.shared
-    @State private var results: [FavoriteTeam: Match?] = [:]
+    @Query private var favoriteTeams: [FavoriteTeam]
+    @Environment(\.modelContext) private var modelContext
+    @State private var results: [PersistentIdentifier: Match?] = [:]
     @State private var sortOrder: SortOrder = .mostRecent
     @State private var sportFilter: Sport? = nil
+    @State private var isManaging = false
 
     private var uniqueSports: [Sport] {
         var seen = Set<Sport>()
@@ -41,8 +45,8 @@ struct MyTeamsView: View {
             return filtered.sorted { $0.name < $1.name }
         case .mostRecent:
             return filtered.sorted { a, b in
-                let dateA = (results[a] ?? nil)?.date ?? ""
-                let dateB = (results[b] ?? nil)?.date ?? ""
+                let dateA = (results[a.id] ?? nil)?.date ?? ""
+                let dateB = (results[b.id] ?? nil)?.date ?? ""
                 return dateA > dateB
             }
         }
@@ -52,95 +56,181 @@ struct MyTeamsView: View {
         ZStack {
             Theme.background.ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("MY TEAMS")
-                            .font(.caption2.weight(.semibold))
-                            .kerning(3)
-                            .foregroundStyle(.secondary)
-                        Text(sortOrder.label)
-                            .font(.title.weight(.black))
-                            .foregroundStyle(.primary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 60)
-                    .padding(.bottom, 16)
-
-                    HStack(spacing: 8) {
-                        Menu {
-                            Button {
-                                sortOrder = .mostRecent
-                            } label: {
-                                Label("Most Recent", systemImage: sortOrder == .mostRecent ? "checkmark" : "")
-                            }
-                            Button {
-                                sortOrder = .alphabetical
-                            } label: {
-                                Label("Alphabetical", systemImage: sortOrder == .alphabetical ? "checkmark" : "")
-                            }
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "arrow.up.arrow.down")
-                                    .font(.caption2.weight(.bold))
+            if favoriteTeams.isEmpty {
+                emptyState
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(alignment: .bottom) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("MY TEAMS")
+                                    .font(.caption2.weight(.semibold))
+                                    .kerning(3)
+                                    .foregroundStyle(.secondary)
                                 Text(sortOrder.label)
-                                    .font(.caption.weight(.semibold))
+                                    .font(.title.weight(.black))
+                                    .foregroundStyle(.primary)
                             }
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(Theme.card, in: RoundedRectangle(cornerRadius: 8))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .strokeBorder(Theme.border, lineWidth: 0.5)
+                            Spacer()
+                            Button {
+                                isManaging = true
+                            } label: {
+                                Text("Manage")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Theme.accent)
                             }
+                            .padding(.bottom, 4)
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 60)
+                        .padding(.bottom, 16)
 
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                FilterChip(label: "All", isSelected: sportFilter == nil) {
-                                    sportFilter = nil
+                        HStack(spacing: 8) {
+                            Menu {
+                                Button {
+                                    sortOrder = .mostRecent
+                                } label: {
+                                    Label("Most Recent", systemImage: sortOrder == .mostRecent ? "checkmark" : "")
                                 }
-                                ForEach(uniqueSports, id: \.self) { sport in
-                                    FilterChip(label: sport.displayName, isSelected: sportFilter == sport) {
-                                        sportFilter = sportFilter == sport ? nil : sport
+                                Button {
+                                    sortOrder = .alphabetical
+                                } label: {
+                                    Label("Alphabetical", systemImage: sortOrder == .alphabetical ? "checkmark" : "")
+                                }
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "arrow.up.arrow.down")
+                                        .font(.caption2.weight(.bold))
+                                    Text(sortOrder.label)
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(Theme.card, in: RoundedRectangle(cornerRadius: 8))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(Theme.border, lineWidth: 0.5)
+                                }
+                            }
+
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 6) {
+                                    FilterChip(label: "All", isSelected: sportFilter == nil) {
+                                        sportFilter = nil
+                                    }
+                                    ForEach(uniqueSports, id: \.self) { sport in
+                                        FilterChip(label: sport.displayName, isSelected: sportFilter == sport) {
+                                            sportFilter = sportFilter == sport ? nil : sport
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
 
-                    VStack(spacing: 10) {
-                        ForEach(displayedTeams) { team in
-                            MatchCard(team: team, match: results[team] ?? nil)
+                        VStack(spacing: 10) {
+                            ForEach(displayedTeams) { team in
+                                MatchCard(team: team, match: results[team.id] ?? nil)
+                            }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 32)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 32)
                 }
             }
         }
-        .task {
+        .sheet(isPresented: $isManaging) {
+            ManageTeamsSheet(favoriteTeams: favoriteTeams)
+        }
+        .task(id: favoriteTeams.map { $0.id }) {
+            results = [:]
             await fetchAll()
         }
     }
 
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "star.slash")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary)
+            Text("No teams yet")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.primary)
+            Text("Search for a team and tap + to add it here.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 40)
+    }
+
     private func fetchAll() async {
-        await withTaskGroup(of: (FavoriteTeam, Match?).self) { group in
+        await withTaskGroup(of: (PersistentIdentifier, Match?).self) { group in
             for team in favoriteTeams {
+                let teamID = team.id
                 group.addTask {
                     do {
                         let match = try await service.fetchMatches(for: team).first
-                        return (team, match)
+                        return (teamID, match)
                     } catch {
-                        return (team, nil)
+                        return (teamID, nil)
                     }
                 }
             }
-            for await (team, match) in group {
-                results[team] = match
+            for await (teamID, match) in group {
+                results[teamID] = match
+            }
+        }
+    }
+}
+
+private struct ManageTeamsSheet: View {
+    let favoriteTeams: [FavoriteTeam]
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+
+                List {
+                    ForEach(favoriteTeams) { team in
+                        HStack(spacing: 14) {
+                            TeamLogo(url: team.logoURL, size: 36)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(team.name)
+                                    .font(.callout.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                SportBadge(sport: team.sport)
+                            }
+                            Spacer()
+                            Button {
+                                modelContext.delete(team)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                        .listRowBackground(Theme.card)
+                        .listRowSeparatorTint(Theme.border)
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Manage Teams")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(Theme.accent)
+                        .fontWeight(.semibold)
+                }
             }
         }
     }
@@ -169,4 +259,5 @@ private struct FilterChip: View {
 
 #Preview {
     MyTeamsView()
+        .modelContainer(for: FavoriteTeam.self, inMemory: true)
 }
