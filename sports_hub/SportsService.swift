@@ -8,6 +8,14 @@
 import Foundation
 import Observation
 
+
+protocol TeamQueryable {
+    var name: String { get }
+    var sport: Sport { get }
+    var teamId: Int? { get }
+    var apiName: String? { get }
+}
+
 @Observable
 class SportsService {
     static let shared = SportsService()
@@ -62,7 +70,7 @@ class SportsService {
         return results
     }
 
-    func fetchMatches(for team: FavoriteTeam) async throws -> [Match] {
+    func fetchMatches(for team: TeamQueryable) async throws -> [Match] {
         var components = URLComponents(string: team.sport.matchesURL)
         var queryItems: [URLQueryItem] = []
 

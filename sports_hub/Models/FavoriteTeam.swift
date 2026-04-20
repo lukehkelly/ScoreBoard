@@ -29,3 +29,5 @@ class FavoriteTeam {
         self.logoURL = logoURL
     }
 }
+
+extension FavoriteTeam: TeamQueryable {}

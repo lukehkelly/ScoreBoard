@@ -27,6 +27,7 @@ struct MyTeamsView: View {
     @State private var sortOrder: SortOrder = .mostRecent
     @State private var sportFilter: Sport? = nil
     @State private var isManaging = false
+    @State private var isPreviewing = false
 
     private var uniqueSports: [Sport] {
         var seen = Set<Sport>()
@@ -72,12 +73,21 @@ struct MyTeamsView: View {
                                     .foregroundStyle(.primary)
                             }
                             Spacer()
-                            Button {
-                                isManaging = true
-                            } label: {
-                                Text("Manage")
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(Theme.accent)
+                            HStack(spacing: 12) {
+                                Button {
+                                    isPreviewing = true
+                                } label: {
+                                    Text("Preview")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(Theme.accent)
+                                }
+                                Button {
+                                    isManaging = true
+                                } label: {
+                                    Text("Manage")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(Theme.accent)
+                                }
                             }
                             .padding(.bottom, 4)
                         }
@@ -143,6 +153,9 @@ struct MyTeamsView: View {
         }
         .sheet(isPresented: $isManaging) {
             ManageTeamsSheet(favoriteTeams: favoriteTeams)
+        }
+        .sheet(isPresented: $isPreviewing) {
+            WidgetPreviewSheet(favoriteTeams: favoriteTeams)
         }
         .task(id: favoriteTeams.map { $0.id }) {
             results = [:]
