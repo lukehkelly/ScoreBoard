@@ -3,7 +3,6 @@
 //  SportsHubWidget
 //
 
-
 import AppIntents
 import Foundation
 
@@ -39,10 +38,7 @@ struct TeamEntity: AppEntity, Identifiable {
 
 struct TeamEntityQuery: EntityStringQuery {
     func entities(for identifiers: [TeamEntity.ID]) async throws -> [TeamEntity] {
-        // WidgetKit calls this to re-resolve saved entities across timeline
-        // refreshes. Reconstruct a minimal entity from the ID ("<sport>:<teamId>")
-        // so the configuration is preserved. Name/logo are placeholders — the
-        // actual match data comes from SportsService.fetchMatches.
+
         identifiers.compactMap { id in
             let parts = id.split(separator: ":", maxSplits: 1)
             guard parts.count == 2,

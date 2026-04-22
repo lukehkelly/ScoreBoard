@@ -5,8 +5,6 @@
 
 import SwiftUI
 
-// MARK: - Small views
-
 struct SmallLiveView: View {
     let team: TeamEntity
     let match: Match
@@ -36,6 +34,8 @@ struct SmallLiveView: View {
 struct SmallUpcomingView: View {
     let team: TeamEntity
     let match: Match
+    let homeLogoData: Data?
+    let awayLogoData: Data?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -48,11 +48,11 @@ struct SmallUpcomingView: View {
             }
             Spacer(minLength: 0)
             HStack(spacing: 10) {
-                TeamLogo(url: match.homeTeam.logo, size: 28)
+                WidgetLogo(data: homeLogoData, url: match.homeTeam.logo, size: 28)
                 Text("vs")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
-                TeamLogo(url: match.awayTeam.logo, size: 28)
+                WidgetLogo(data: awayLogoData, url: match.awayTeam.logo, size: 28)
             }
             Text(WidgetDateFormat.shortTime(match.date))
                 .font(.callout.weight(.bold))
@@ -90,10 +90,11 @@ struct SmallRecentView: View {
 
 struct SmallNoDataView: View {
     let team: TeamEntity
+    let teamLogoData: Data?
 
     var body: some View {
         VStack(spacing: 8) {
-            TeamLogo(url: team.logoURL, size: 44)
+            WidgetLogo(data: teamLogoData, url: team.logoURL, size: 44)
             Text(team.name)
                 .font(.callout.weight(.bold))
                 .foregroundStyle(.primary)
@@ -108,22 +109,24 @@ struct SmallNoDataView: View {
     }
 }
 
-// MARK: - Medium views
-
 struct MediumLiveView: View {
     let team: TeamEntity
     let match: Match
+    let homeLogoData: Data?
+    let awayLogoData: Data?
 
     var body: some View {
         VStack(spacing: 10) {
             HStack(alignment: .center, spacing: 0) {
-                teamColumn(name: match.homeTeam.name, logo: match.homeTeam.logo, alignment: .leading)
+                teamColumn(name: match.homeTeam.name, logo: match.homeTeam.logo,
+                           data: homeLogoData, alignment: .leading)
                 Spacer(minLength: 8)
                 Text(match.state?.score?.displayString ?? "–")
                     .font(.title.weight(.heavy).monospacedDigit())
                     .foregroundStyle(.primary)
                 Spacer(minLength: 8)
-                teamColumn(name: match.awayTeam.name, logo: match.awayTeam.logo, alignment: .trailing)
+                teamColumn(name: match.awayTeam.name, logo: match.awayTeam.logo,
+                           data: awayLogoData, alignment: .trailing)
             }
             HStack(spacing: 6) {
                 Circle().fill(Theme.live).frame(width: 5, height: 5)
@@ -137,9 +140,10 @@ struct MediumLiveView: View {
         }
     }
 
-    private func teamColumn(name: String, logo: String?, alignment: HorizontalAlignment) -> some View {
+    private func teamColumn(name: String, logo: String?, data: Data?,
+                            alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 4) {
-            TeamLogo(url: logo, size: 32)
+            WidgetLogo(data: data, url: logo, size: 32)
             Text(name)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.primary)
@@ -154,11 +158,14 @@ struct MediumLiveView: View {
 struct MediumUpcomingView: View {
     let team: TeamEntity
     let match: Match
+    let homeLogoData: Data?
+    let awayLogoData: Data?
 
     var body: some View {
         VStack(spacing: 8) {
             HStack(alignment: .center, spacing: 0) {
-                teamColumn(name: match.homeTeam.name, logo: match.homeTeam.logo, alignment: .leading)
+                teamColumn(name: match.homeTeam.name, logo: match.homeTeam.logo,
+                           data: homeLogoData, alignment: .leading)
                 VStack(spacing: 2) {
                     Text("vs")
                         .font(.caption.weight(.bold))
@@ -171,7 +178,8 @@ struct MediumUpcomingView: View {
                         .foregroundStyle(Theme.accent)
                 }
                 .frame(maxWidth: 120)
-                teamColumn(name: match.awayTeam.name, logo: match.awayTeam.logo, alignment: .trailing)
+                teamColumn(name: match.awayTeam.name, logo: match.awayTeam.logo,
+                           data: awayLogoData, alignment: .trailing)
             }
             HStack {
                 Spacer()
@@ -180,9 +188,10 @@ struct MediumUpcomingView: View {
         }
     }
 
-    private func teamColumn(name: String, logo: String?, alignment: HorizontalAlignment) -> some View {
+    private func teamColumn(name: String, logo: String?, data: Data?,
+                            alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 4) {
-            TeamLogo(url: logo, size: 36)
+            WidgetLogo(data: data, url: logo, size: 36)
             Text(name)
                 .font(.callout.weight(.bold))
                 .foregroundStyle(.primary)
@@ -197,17 +206,21 @@ struct MediumUpcomingView: View {
 struct MediumRecentView: View {
     let team: TeamEntity
     let match: Match
+    let homeLogoData: Data?
+    let awayLogoData: Data?
 
     var body: some View {
         VStack(spacing: 10) {
             HStack(alignment: .center, spacing: 0) {
-                teamColumn(name: match.homeTeam.name, logo: match.homeTeam.logo, alignment: .leading)
+                teamColumn(name: match.homeTeam.name, logo: match.homeTeam.logo,
+                           data: homeLogoData, alignment: .leading)
                 Spacer(minLength: 8)
                 Text(match.state?.score?.displayString ?? "–")
                     .font(.title.weight(.heavy).monospacedDigit())
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 8)
-                teamColumn(name: match.awayTeam.name, logo: match.awayTeam.logo, alignment: .trailing)
+                teamColumn(name: match.awayTeam.name, logo: match.awayTeam.logo,
+                           data: awayLogoData, alignment: .trailing)
             }
             HStack {
                 Text("FINAL")
@@ -223,9 +236,10 @@ struct MediumRecentView: View {
         }
     }
 
-    private func teamColumn(name: String, logo: String?, alignment: HorizontalAlignment) -> some View {
+    private func teamColumn(name: String, logo: String?, data: Data?,
+                            alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 4) {
-            TeamLogo(url: logo, size: 32)
+            WidgetLogo(data: data, url: logo, size: 32)
             Text(name)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.primary)
@@ -239,10 +253,11 @@ struct MediumRecentView: View {
 
 struct MediumNoDataView: View {
     let team: TeamEntity
+    let teamLogoData: Data?
 
     var body: some View {
         HStack(spacing: 14) {
-            TeamLogo(url: team.logoURL, size: 44)
+            WidgetLogo(data: teamLogoData, url: team.logoURL, size: 44)
             VStack(alignment: .leading, spacing: 4) {
                 Text(team.name)
                     .font(.title3.weight(.bold))
@@ -258,8 +273,6 @@ struct MediumNoDataView: View {
         }
     }
 }
-
-// MARK: - Helpers
 
 private func abbrev(_ name: String) -> String {
     let parts = name.split(separator: " ")

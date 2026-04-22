@@ -19,15 +19,26 @@ enum SortOrder {
     }
 }
 
+enum MatchView: String, CaseIterable, Identifiable {
+    case recent, upcoming
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .recent:   return "Recent"
+        case .upcoming: return "Upcoming"
+        }
+    }
+}
+
 struct MyTeamsView: View {
     private let service = SportsService.shared
     @Query private var favoriteTeams: [FavoriteTeam]
     @Environment(\.modelContext) private var modelContext
-    @State private var results: [PersistentIdentifier: Match?] = [:]
+    @State private var results: [PersistentIdentifier: [Match]] = [:]
     @State private var sortOrder: SortOrder = .mostRecent
     @State private var sportFilter: Sport? = nil
+    @State private var matchView: MatchView = .recent
     @State private var isManaging = false
-    @State private var isPreviewing = false
 
     private var uniqueSports: [Sport] {
         var seen = Set<Sport>()
@@ -46,11 +57,42 @@ struct MyTeamsView: View {
             return filtered.sorted { $0.name < $1.name }
         case .mostRecent:
             return filtered.sorted { a, b in
-                let dateA = (results[a.id] ?? nil)?.date ?? ""
-                let dateB = (results[b.id] ?? nil)?.date ?? ""
+                let dateA = matchFor(a)?.date ?? ""
+                let dateB = matchFor(b)?.date ?? ""
                 return dateA > dateB
             }
         }
+    }
+
+    private func matchFor(_ team: FavoriteTeam) -> Match? {
+        let matches = results[team.id] ?? []
+        if let live = matches.first(where: { isInProgress($0) }) {
+            return live
+        }
+        let now = Date()
+        let dated = matches.compactMap { m -> (Match, Date)? in
+            guard let d = parseDate(m.date) else { return nil }
+            return (m, d)
+        }
+        switch matchView {
+        case .recent:
+            return dated.filter { $0.1 <= now }.max { $0.1 < $1.1 }?.0
+        case .upcoming:
+            return dated.filter { $0.1 > now }.min { $0.1 < $1.1 }?.0
+        }
+    }
+
+    private func isInProgress(_ match: Match) -> Bool {
+        (match.state?.description.lowercased().contains("progress")) ?? false
+    }
+
+    private func parseDate(_ s: String) -> Date? {
+        let withFrac = ISO8601DateFormatter()
+        withFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = withFrac.date(from: s) { return d }
+        let plain = ISO8601DateFormatter()
+        plain.formatOptions = [.withInternetDateTime]
+        return plain.date(from: s)
     }
 
     var body: some View {
@@ -73,21 +115,12 @@ struct MyTeamsView: View {
                                     .foregroundStyle(.primary)
                             }
                             Spacer()
-                            HStack(spacing: 12) {
-                                Button {
-                                    isPreviewing = true
-                                } label: {
-                                    Text("Preview")
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(Theme.accent)
-                                }
-                                Button {
-                                    isManaging = true
-                                } label: {
-                                    Text("Manage")
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(Theme.accent)
-                                }
+                            Button {
+                                isManaging = true
+                            } label: {
+                                Text("Manage")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Theme.accent)
                             }
                             .padding(.bottom, 4)
                         }
@@ -138,11 +171,20 @@ struct MyTeamsView: View {
                             }
                         }
                         .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+
+                        Picker("View", selection: $matchView) {
+                            ForEach(MatchView.allCases) { mode in
+                                Text(mode.label).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, 16)
                         .padding(.bottom, 16)
 
                         VStack(spacing: 10) {
                             ForEach(displayedTeams) { team in
-                                MatchCard(team: team, match: results[team.id] ?? nil)
+                                MatchCard(team: team, match: matchFor(team))
                             }
                         }
                         .padding(.horizontal, 16)
@@ -153,9 +195,6 @@ struct MyTeamsView: View {
         }
         .sheet(isPresented: $isManaging) {
             ManageTeamsSheet(favoriteTeams: favoriteTeams)
-        }
-        .sheet(isPresented: $isPreviewing) {
-            WidgetPreviewSheet(favoriteTeams: favoriteTeams)
         }
         .task(id: favoriteTeams.map { $0.id }) {
             results = [:]
@@ -180,20 +219,20 @@ struct MyTeamsView: View {
     }
 
     private func fetchAll() async {
-        await withTaskGroup(of: (PersistentIdentifier, Match?).self) { group in
+        await withTaskGroup(of: (PersistentIdentifier, [Match]).self) { group in
             for team in favoriteTeams {
                 let teamID = team.id
                 group.addTask {
                     do {
-                        let match = try await service.fetchMatches(for: team).first
-                        return (teamID, match)
+                        let matches = try await service.fetchMatches(for: team)
+                        return (teamID, matches)
                     } catch {
-                        return (teamID, nil)
+                        return (teamID, [])
                     }
                 }
             }
-            for await (teamID, match) in group {
-                results[teamID] = match
+            for await (teamID, matches) in group {
+                results[teamID] = matches
             }
         }
     }

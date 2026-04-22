@@ -28,7 +28,7 @@ struct sports_hubApp: App {
         do {
             return try ModelContainer(for: FavoriteTeam.self)
         } catch {
-            // Schema mismatch — wipe store and start fresh
+
             let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             let storeURL = support.appending(path: "default.store")
             try? FileManager.default.removeItem(at: storeURL)

@@ -8,7 +8,6 @@
 import Foundation
 import Observation
 
-
 protocol TeamQueryable {
     var name: String { get }
     var sport: Sport { get }

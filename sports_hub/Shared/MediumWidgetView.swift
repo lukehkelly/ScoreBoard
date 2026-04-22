@@ -12,10 +12,26 @@ struct MediumWidgetView: View {
             Theme.background
             Group {
                 switch entry.state {
-                case .live(let m):     MediumLiveView(team: entry.team, match: m)
-                case .upcoming(let m): MediumUpcomingView(team: entry.team, match: m)
-                case .recent(let m):   MediumRecentView(team: entry.team, match: m)
-                case .noData:          MediumNoDataView(team: entry.team)
+                case .live(let m):
+                    MediumLiveView(
+                        team: entry.team, match: m,
+                        homeLogoData: entry.homeLogoData,
+                        awayLogoData: entry.awayLogoData
+                    )
+                case .upcoming(let m):
+                    MediumUpcomingView(
+                        team: entry.team, match: m,
+                        homeLogoData: entry.homeLogoData,
+                        awayLogoData: entry.awayLogoData
+                    )
+                case .recent(let m):
+                    MediumRecentView(
+                        team: entry.team, match: m,
+                        homeLogoData: entry.homeLogoData,
+                        awayLogoData: entry.awayLogoData
+                    )
+                case .noData:
+                    MediumNoDataView(team: entry.team, teamLogoData: entry.teamLogoData)
                 }
             }
             .padding(16)

@@ -25,6 +25,23 @@ struct TeamLogo: View {
     }
 }
 
+struct WidgetLogo: View {
+    let data: Data?
+    let url: String?
+    let size: CGFloat
+
+    var body: some View {
+        if let data, let img = UIImage(data: data) {
+            Image(uiImage: img)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else {
+            TeamLogo(url: url, size: size)
+        }
+    }
+}
+
 struct SportBadge: View {
     let sport: Sport
 

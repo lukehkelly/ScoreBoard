@@ -66,7 +66,7 @@ struct MatchCard: View {
                 .padding(.leading, 48)
             }
             .overlay {
-                if let score = match.state?.score?.displayString {
+                if !isScheduled(match), let score = match.state?.score?.displayString {
                     Text(score)
                         .font(.title2.weight(.heavy).monospacedDigit())
                         .foregroundStyle(.primary)
@@ -85,7 +85,7 @@ struct MatchCard: View {
                 Circle()
                     .fill(isLive ? Theme.live : Theme.secondary.opacity(0.4))
                     .frame(width: 5, height: 5)
-                Text(match.state?.description ?? "")
+                Text(displayStatus(match))
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
             }
@@ -110,6 +110,17 @@ struct MatchCard: View {
                 .foregroundStyle(.secondary.opacity(0.5))
         }
         .padding(18)
+    }
+
+    private func isScheduled(_ match: Match) -> Bool {
+        let d = match.state?.description.lowercased() ?? ""
+        return d.contains("not started") || d.contains("scheduled")
+    }
+
+    private func displayStatus(_ match: Match) -> String {
+        let raw = match.state?.description ?? ""
+        if raw.lowercased().contains("not started") { return "Scheduled" }
+        return raw
     }
 }
 

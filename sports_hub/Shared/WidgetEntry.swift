@@ -17,10 +17,15 @@ struct WidgetEntry: TimelineEntry {
     let date: Date
     let team: TeamEntity
     let state: WidgetMatchState
+
+    var teamLogoData: Data?
+
+    var homeLogoData: Data?
+    var awayLogoData: Data?
 }
 
 extension WidgetEntry {
-    /// Placeholder entry used for the widget gallery and redacted previews.
+
     static func placeholder(team: TeamEntity? = nil) -> WidgetEntry {
         WidgetEntry(
             date: Date(),
