@@ -9,13 +9,9 @@ import SwiftUI
 import SwiftData
 
 struct SearchView: View {
-    private let service = SportsService.shared
     @Environment(\.modelContext) private var modelContext
     @Query private var favoriteTeams: [FavoriteTeam]
-    @State private var query = ""
-    @State private var submittedQuery = ""
-    @State private var results: [TeamResult] = []
-    @State private var isSearching = false
+    @State private var vm = SearchViewModel()
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -38,23 +34,21 @@ struct SearchView: View {
 
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundStyle(query.isEmpty ? Color.secondary : Theme.accent)
+                        .foregroundStyle(vm.query.isEmpty ? Color.secondary : Theme.accent)
                         .font(.subheadline.weight(.semibold))
 
-                    TextField("", text: $query, prompt: Text("Search teams…").foregroundColor(Theme.secondary))
+                    TextField("", text: $vm.query, prompt: Text("Search teams…").foregroundColor(Theme.secondary))
                         .foregroundStyle(Theme.primary)
                         .focused($fieldFocused)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .onSubmit {
-                            submittedQuery = query.trimmingCharacters(in: .whitespaces)
+                            vm.submit()
                         }
 
-                    if !query.isEmpty {
+                    if !vm.query.isEmpty {
                         Button {
-                            query = ""
-                            submittedQuery = ""
-                            results = []
+                            vm.clear()
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
@@ -73,7 +67,7 @@ struct SearchView: View {
                 .padding(.bottom, 12)
                 .animation(.easeInOut(duration: 0.15), value: fieldFocused)
 
-                if isSearching {
+                if vm.isSearching {
                     HStack {
                         Spacer()
                         ProgressView()
@@ -81,7 +75,7 @@ struct SearchView: View {
                         Spacer()
                     }
                     .padding(.top, 40)
-                } else if results.isEmpty && !submittedQuery.isEmpty {
+                } else if vm.results.isEmpty && !vm.submittedQuery.isEmpty {
                     HStack {
                         Spacer()
                         Text("No teams found")
@@ -93,13 +87,11 @@ struct SearchView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 1) {
-                            ForEach(results) { result in
+                            ForEach(vm.results) { result in
                                 TeamRow(
                                     result: result,
-                                    isAdded: favoriteTeams.contains {
-                                        $0.name == (result.team.displayName ?? result.team.name) && $0.sportRaw == result.sport.rawValue
-                                    },
-                                    onAdd: { addTeam(from: result) }
+                                    isAdded: vm.isAlreadyFavorite(result, in: favoriteTeams),
+                                    onAdd: { vm.addTeam(from: result, into: modelContext) }
                                 )
                             }
                         }
@@ -111,28 +103,9 @@ struct SearchView: View {
                 Spacer(minLength: 0)
             }
         }
-        .task(id: submittedQuery) {
-            guard !submittedQuery.isEmpty else {
-                results = []
-                isSearching = false
-                return
-            }
-            isSearching = true
-            results = await service.searchTeams(query: submittedQuery)
-            isSearching = false
+        .task(id: vm.submittedQuery) {
+            await vm.runSearch()
         }
-    }
-
-    private func addTeam(from result: TeamResult) {
-        let name = result.team.displayName ?? result.team.name
-        let team = FavoriteTeam(
-            name: name,
-            sport: result.sport,
-            teamId: result.team.id,
-            apiName: nil,
-            logoURL: result.team.logo
-        )
-        modelContext.insert(team)
     }
 }
 

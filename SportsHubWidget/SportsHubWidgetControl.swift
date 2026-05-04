@@ -35,7 +35,7 @@ extension SportsHubWidgetControl {
         }
 
         func currentValue() async throws -> Bool {
-            let isRunning = true 
+            let isRunning = true
             return isRunning
         }
     }
@@ -48,7 +48,7 @@ struct StartTimerIntent: SetValueIntent {
     var value: Bool
 
     func perform() async throws -> some IntentResult {
-        
+
         return .result()
     }
 }

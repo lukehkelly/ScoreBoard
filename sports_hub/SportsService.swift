@@ -69,6 +69,49 @@ class SportsService {
         return results
     }
 
+    func fetchMatches(for sport: Sport, date: Date = Date()) async throws -> [Match] {
+        var components = URLComponents(string: sport.matchesURL)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        components?.queryItems = [
+            URLQueryItem(name: "date", value: formatter.string(from: date))
+        ]
+
+        guard let url = components?.url else {
+            throw SportsServiceError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue(apiKey, forHTTPHeaderField: "x-rapidapi-key")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw SportsServiceError.networkError
+            }
+            guard httpResponse.statusCode == 200 else {
+                throw SportsServiceError.networkError
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let decoded = try decoder.decode(MatchesResponse.self, from: data)
+                return decoded.data.filter { sport.matches(leagueName: $0.leagueName) }
+            } catch {
+                throw SportsServiceError.codingError
+            }
+        } catch is URLError {
+            throw SportsServiceError.networkError
+        } catch let error as SportsServiceError {
+            throw error
+        } catch {
+            throw SportsServiceError.unknown
+        }
+    }
+
     func fetchMatches(for team: TeamQueryable) async throws -> [Match] {
         var components = URLComponents(string: team.sport.matchesURL)
         var queryItems: [URLQueryItem] = []

@@ -33,7 +33,7 @@ struct MatchCard: View {
             HStack {
                 SportBadge(sport: team.sport)
                 Spacer()
-                Text(match.date.matchDate)
+                Text(DateParsing.matchDateString(match.date))
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
             }
@@ -66,7 +66,7 @@ struct MatchCard: View {
                 .padding(.leading, 48)
             }
             .overlay {
-                if !isScheduled(match), let score = match.state?.score?.displayString {
+                if !MatchStatus.isScheduled(match), let score = match.state?.score?.displayString {
                     Text(score)
                         .font(.title2.weight(.heavy).monospacedDigit())
                         .foregroundStyle(.primary)
@@ -81,11 +81,11 @@ struct MatchCard: View {
             .padding(.top, 14)
 
             HStack(spacing: 5) {
-                let isLive = match.state?.description.lowercased().contains("progress") ?? false
+                let isLive = MatchStatus.isInProgress(match)
                 Circle()
                     .fill(isLive ? Theme.live : Theme.secondary.opacity(0.4))
                     .frame(width: 5, height: 5)
-                Text(displayStatus(match))
+                Text(MatchStatus.displayStatus(match))
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
             }
@@ -110,35 +110,5 @@ struct MatchCard: View {
                 .foregroundStyle(.secondary.opacity(0.5))
         }
         .padding(18)
-    }
-
-    private func isScheduled(_ match: Match) -> Bool {
-        let d = match.state?.description.lowercased() ?? ""
-        return d.contains("not started") || d.contains("scheduled")
-    }
-
-    private func displayStatus(_ match: Match) -> String {
-        let raw = match.state?.description ?? ""
-        if raw.lowercased().contains("not started") { return "Scheduled" }
-        return raw
-    }
-}
-
-private extension String {
-    var matchDate: String {
-        let withFrac = ISO8601DateFormatter()
-        withFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-        let withoutFrac = ISO8601DateFormatter()
-        withoutFrac.formatOptions = [.withInternetDateTime]
-
-        for parser in [withFrac, withoutFrac] {
-            if let date = parser.date(from: self) {
-                let f = DateFormatter()
-                f.dateFormat = "MMM d, yyyy"
-                return f.string(from: date)
-            }
-        }
-        return self
     }
 }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Sport: String, Codable, Hashable {
+enum Sport: String, Codable, Hashable, CaseIterable {
     case football
     case nfl
     case ncaaFootball
@@ -27,6 +27,22 @@ enum Sport: String, Codable, Hashable {
         case .ncaaBasketball: return "https://nba.highlightly.net/matches"
         case .mlb:            return "https://baseball.highlightly.net/matches"
         case .ncaaBaseball:   return "https://baseball.highlightly.net/matches"
+        }
+    }
+
+    /// Some endpoints serve more than one league (NFL + NCAA football share one host,
+    /// MLB + NCAA baseball share one, NBA + NCAA basketball share one). Use this to
+    /// filter a response down to a specific sport based on the match's `leagueName`.
+    func matches(leagueName: String?) -> Bool {
+        let name = leagueName?.uppercased() ?? ""
+        switch self {
+        case .nfl:            return name == "NFL"
+        case .ncaaFootball:   return name != "NFL"
+        case .mlb:            return name == "MLB"
+        case .ncaaBaseball:   return name != "MLB"
+        case .nba:            return name == "NBA"
+        case .ncaaBasketball: return name != "NBA"
+        case .football, .nhl: return true
         }
     }
 

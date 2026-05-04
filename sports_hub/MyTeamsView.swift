@@ -8,92 +8,10 @@
 import SwiftUI
 import SwiftData
 
-enum SortOrder {
-    case mostRecent, alphabetical
-
-    var label: String {
-        switch self {
-        case .mostRecent:   return "Most Recent"
-        case .alphabetical: return "Alphabetical"
-        }
-    }
-}
-
-enum MatchView: String, CaseIterable, Identifiable {
-    case recent, upcoming
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .recent:   return "Recent"
-        case .upcoming: return "Upcoming"
-        }
-    }
-}
-
 struct MyTeamsView: View {
-    private let service = SportsService.shared
     @Query private var favoriteTeams: [FavoriteTeam]
     @Environment(\.modelContext) private var modelContext
-    @State private var results: [PersistentIdentifier: [Match]] = [:]
-    @State private var sortOrder: SortOrder = .mostRecent
-    @State private var sportFilter: Sport? = nil
-    @State private var matchView: MatchView = .recent
-    @State private var isManaging = false
-
-    private var uniqueSports: [Sport] {
-        var seen = Set<Sport>()
-        return favoriteTeams.compactMap { team in
-            seen.insert(team.sport).inserted ? team.sport : nil
-        }
-    }
-
-    private var displayedTeams: [FavoriteTeam] {
-        var filtered = favoriteTeams
-        if let filter = sportFilter {
-            filtered = filtered.filter { $0.sport == filter }
-        }
-        switch sortOrder {
-        case .alphabetical:
-            return filtered.sorted { $0.name < $1.name }
-        case .mostRecent:
-            return filtered.sorted { a, b in
-                let dateA = matchFor(a)?.date ?? ""
-                let dateB = matchFor(b)?.date ?? ""
-                return dateA > dateB
-            }
-        }
-    }
-
-    private func matchFor(_ team: FavoriteTeam) -> Match? {
-        let matches = results[team.id] ?? []
-        if let live = matches.first(where: { isInProgress($0) }) {
-            return live
-        }
-        let now = Date()
-        let dated = matches.compactMap { m -> (Match, Date)? in
-            guard let d = parseDate(m.date) else { return nil }
-            return (m, d)
-        }
-        switch matchView {
-        case .recent:
-            return dated.filter { $0.1 <= now }.max { $0.1 < $1.1 }?.0
-        case .upcoming:
-            return dated.filter { $0.1 > now }.min { $0.1 < $1.1 }?.0
-        }
-    }
-
-    private func isInProgress(_ match: Match) -> Bool {
-        (match.state?.description.lowercased().contains("progress")) ?? false
-    }
-
-    private func parseDate(_ s: String) -> Date? {
-        let withFrac = ISO8601DateFormatter()
-        withFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = withFrac.date(from: s) { return d }
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        return plain.date(from: s)
-    }
+    @State private var vm = MyTeamsViewModel()
 
     var body: some View {
         ZStack {
@@ -110,13 +28,13 @@ struct MyTeamsView: View {
                                     .font(.caption2.weight(.semibold))
                                     .kerning(3)
                                     .foregroundStyle(.secondary)
-                                Text(sortOrder.label)
+                                Text(vm.sortOrder.label)
                                     .font(.title.weight(.black))
                                     .foregroundStyle(.primary)
                             }
                             Spacer()
                             Button {
-                                isManaging = true
+                                vm.isManaging = true
                             } label: {
                                 Text("Manage")
                                     .font(.subheadline.weight(.medium))
@@ -131,20 +49,20 @@ struct MyTeamsView: View {
                         HStack(spacing: 8) {
                             Menu {
                                 Button {
-                                    sortOrder = .mostRecent
+                                    vm.sortOrder = .mostRecent
                                 } label: {
-                                    Label("Most Recent", systemImage: sortOrder == .mostRecent ? "checkmark" : "")
+                                    Label("Most Recent", systemImage: vm.sortOrder == .mostRecent ? "checkmark" : "")
                                 }
                                 Button {
-                                    sortOrder = .alphabetical
+                                    vm.sortOrder = .alphabetical
                                 } label: {
-                                    Label("Alphabetical", systemImage: sortOrder == .alphabetical ? "checkmark" : "")
+                                    Label("Alphabetical", systemImage: vm.sortOrder == .alphabetical ? "checkmark" : "")
                                 }
                             } label: {
                                 HStack(spacing: 5) {
                                     Image(systemName: "arrow.up.arrow.down")
                                         .font(.caption2.weight(.bold))
-                                    Text(sortOrder.label)
+                                    Text(vm.sortOrder.label)
                                         .font(.caption.weight(.semibold))
                                 }
                                 .foregroundStyle(.primary)
@@ -159,12 +77,12 @@ struct MyTeamsView: View {
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 6) {
-                                    FilterChip(label: "All", isSelected: sportFilter == nil) {
-                                        sportFilter = nil
+                                    FilterChip(label: "All", isSelected: vm.sportFilter == nil) {
+                                        vm.sportFilter = nil
                                     }
-                                    ForEach(uniqueSports, id: \.self) { sport in
-                                        FilterChip(label: sport.displayName, isSelected: sportFilter == sport) {
-                                            sportFilter = sportFilter == sport ? nil : sport
+                                    ForEach(vm.uniqueSports(from: favoriteTeams), id: \.self) { sport in
+                                        FilterChip(label: sport.displayName, isSelected: vm.sportFilter == sport) {
+                                            vm.sportFilter = vm.sportFilter == sport ? nil : sport
                                         }
                                     }
                                 }
@@ -173,7 +91,7 @@ struct MyTeamsView: View {
                         .padding(.horizontal, 16)
                         .padding(.bottom, 12)
 
-                        Picker("View", selection: $matchView) {
+                        Picker("View", selection: $vm.matchView) {
                             ForEach(MatchView.allCases) { mode in
                                 Text(mode.label).tag(mode)
                             }
@@ -183,8 +101,8 @@ struct MyTeamsView: View {
                         .padding(.bottom, 16)
 
                         VStack(spacing: 10) {
-                            ForEach(displayedTeams) { team in
-                                MatchCard(team: team, match: matchFor(team))
+                            ForEach(vm.displayedTeams(from: favoriteTeams)) { team in
+                                MatchCard(team: team, match: vm.matchFor(team))
                             }
                         }
                         .padding(.horizontal, 16)
@@ -193,12 +111,11 @@ struct MyTeamsView: View {
                 }
             }
         }
-        .sheet(isPresented: $isManaging) {
+        .sheet(isPresented: $vm.isManaging) {
             ManageTeamsSheet(favoriteTeams: favoriteTeams)
         }
         .task(id: favoriteTeams.map { $0.id }) {
-            results = [:]
-            await fetchAll()
+            await vm.fetchAll(for: favoriteTeams)
         }
     }
 
@@ -216,25 +133,6 @@ struct MyTeamsView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 40)
-    }
-
-    private func fetchAll() async {
-        await withTaskGroup(of: (PersistentIdentifier, [Match]).self) { group in
-            for team in favoriteTeams {
-                let teamID = team.id
-                group.addTask {
-                    do {
-                        let matches = try await service.fetchMatches(for: team)
-                        return (teamID, matches)
-                    } catch {
-                        return (teamID, [])
-                    }
-                }
-            }
-            for await (teamID, matches) in group {
-                results[teamID] = matches
-            }
-        }
     }
 }
 
@@ -284,27 +182,6 @@ private struct ManageTeamsSheet: View {
                         .fontWeight(.semibold)
                 }
             }
-        }
-    }
-}
-
-private struct FilterChip: View {
-    let label: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(isSelected ? Theme.background : Color.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(isSelected ? Theme.accent : Theme.card, in: RoundedRectangle(cornerRadius: 8))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(isSelected ? Theme.accent : Theme.border, lineWidth: 0.5)
-                }
         }
     }
 }
